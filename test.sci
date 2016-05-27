@@ -75,6 +75,7 @@ print_line(make_matrix(2,3));
 // test block
 print_line(block ret -> 22); // 22
 print_line(block ret -> (ret(22); print_line(23))); // 22 (note no 23!)
+print_line(block ret -> while true -> ret(22)); // saved from an infinite loop
 
 // quicksort
 qsort := fun (arr) -> (
