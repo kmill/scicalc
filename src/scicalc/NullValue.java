@@ -37,6 +37,11 @@ public class NullValue implements Expr, Value {
 	public Value get(Value index) {
 		throw new IllegalArgumentException("Null is not indexable");
 	}
+	
+	@Override
+    public Value set(Value index, Value value) {
+        throw new IllegalArgumentException("Null is not indexable");
+    }
 
 	public String toString() {
 		return "null";

@@ -46,5 +46,12 @@ public class AppExpr implements Expr {
 		}
 		return "Apply(" + m_func + ", " + args.toString() + ")";
 	}
+	
+	public Expr getFunc() {
+	    return m_func;
+	}
+	public Expr[] getArgs() {
+	    return m_args;
+	}
 
 }
