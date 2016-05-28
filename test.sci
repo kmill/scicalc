@@ -64,10 +64,27 @@ end;
 
 test_fib();
 
-eratosthenes := fun (n)
+fun range(lo, hi)
+  a := make_array(hi-lo, 0);
+  i := lo;
+  while i < hi do
+    a[i-lo] <- i;
+    i <- i + 1;
+  end;
+  a;
+end;
+
+fun forEach(a, f)
+  i := 0;
+  while i < len(a) do
+    f(a[i]);
+    i := i + 1;
+  end;
+end;
+
+fun eratosthenes(n)
   arr := make_array(n, true);
-  i := 2;
-  while i < n do
+  forEach(range(2, n), fun(i)
     if arr[i] do
       print_line(i);
       j := 2*i;
@@ -76,8 +93,7 @@ eratosthenes := fun (n)
         j <- j + i;
       end;
     end;
-    i <- i + 1;
-  end;
+  end);
 end;
 
 print_line("primes up to 100");
@@ -173,3 +189,19 @@ fun mandelbrot()
 end;
 
 mandelbrot();
+
+// This is a test of lexical closures.  i is bound inside make_counter, which is accessible from the returned function
+fun make_counter()
+  i := 0;
+  fun ()
+    i <- i + 1;
+    i;
+  end;
+end;
+
+c := make_counter();
+print_line(c());
+print_line(c());
+d := make_counter();
+print_line(d());
+print_line(c());
