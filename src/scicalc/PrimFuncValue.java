@@ -11,7 +11,9 @@ public enum PrimFuncValue implements Expr,Value {
     // output
     PRINT, PRINT_LINE,
     // arrays
-    MAKE_ARRAY, GET, SET, PUSH, POP, EXTEND, LEN;
+    MAKE_ARRAY, GET, SET, PUSH, POP, EXTEND, LEN,
+    // strings
+    CHAR;
 
     @Override
     public Value evaluate(Environment e) {
@@ -169,6 +171,15 @@ public enum PrimFuncValue implements Expr,Value {
             } else {
                 throw new IllegalArgumentException();
             }
+
+        case CHAR: {
+            checkNumArgs(values, 1);
+            double i = values[0].asFloat();
+            if ((byte) i != i) {
+                throw new IllegalArgumentException("Argument must be an integer");
+            }
+            return new StringValue(new String(new byte[] { (byte) i }));
+        }
         }
         throw new InternalError("missing Func implementation");
     }

@@ -101,8 +101,8 @@ print_line(block ret do ret(22); print_line(23) end); // 22 (note no 23!)
 print_line(block ret do while true do ret(22) end end); // saved from an infinite loop
 
 // quicksort
-qsort := fun (arr)
-  qsort_rec := fun (i, j)
+fun qsort(arr)
+  fun qsort_rec(i, j)
     if i < j do
       pivot := arr[j];
       n := i; m := i;
@@ -128,3 +128,48 @@ print_line(qsort([1,2,3,4,5]));
 print_line(qsort([1,3,5,2,4]));
 print_line(qsort([3,5,1,2,4]));
 print_line(qsort([5,4,3,2,1]));
+
+fun mandelbrot()
+  MAX_ITER := 200;
+  RADIUS := 2.0;
+  MIN_R := -2.25; MAX_R := 0.75;
+  MIN_I := -1.5; MAX_I := 1.5;
+  WIDTH := 80; HEIGHT := 50;
+  fun iter(cr, ci)
+    block return do
+      zr := cr;
+      zi := ci;
+      i := 1;
+      while i <= MAX_ITER do
+        zr2 := zr^2 - zi^2 + cr;
+        zi2 := 2 * zr * zi + ci;
+        if zr2^2 + zi2^2 > RADIUS^2 do return(i); end;
+        zr <- zr2;
+        zi <- zi2;
+        i <- i + 1;
+      end;
+      return(0);
+    end;
+  end;
+  fun lin_ramp(start, stop, t)
+    start + (stop - start) * t
+  end;
+  j := HEIGHT-1;
+  while j >= 0 do
+    i := 0;
+    while i < WIDTH do
+      b := iter(lin_ramp(MIN_R, MAX_R, i / WIDTH),
+                lin_ramp(MIN_I, MAX_I, j / HEIGHT));
+      if b == 0 do
+        print(" ")
+      else
+        print(char(127 - (b % (126 - 32))));
+      end;
+      i <- i + 1;
+    end;
+    print_line();
+    j := j - 1;
+  end;
+end;
+
+mandelbrot();

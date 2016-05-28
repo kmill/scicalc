@@ -15,6 +15,7 @@ public class Interpreter {
         m_env.set("pop", PrimFuncValue.POP);
         m_env.set("extend", PrimFuncValue.EXTEND);
         m_env.set("len", PrimFuncValue.LEN);
+        m_env.set("char", PrimFuncValue.CHAR);
     }
 
     public Value evaluate(String input) throws Exception {
