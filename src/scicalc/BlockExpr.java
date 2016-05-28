@@ -23,6 +23,8 @@ public class BlockExpr implements Expr {
             } else {
                 throw secret2;
             }
+        } finally {
+            secret.invalidate();
         }
     }
 
@@ -32,6 +34,7 @@ public class BlockExpr implements Expr {
 
     private class LabelSecret extends RuntimeException {
         private Value m_value;
+        private boolean m_valid = true;
 
         public String getLabel() {
             return m_label;
@@ -43,6 +46,13 @@ public class BlockExpr implements Expr {
 
         public void setValue(Value value) {
             m_value = value;
+        }
+        
+        public void invalidate() {
+            m_valid = false;
+        }
+        public boolean isValid() {
+            return m_valid;
         }
     }
 
@@ -65,6 +75,9 @@ public class BlockExpr implements Expr {
 
         @Override
         public Value apply(Value[] values) {
+            if (!m_secret.isValid()) {
+                throw new IllegalStateException("Label invalid outside defining block");
+            }
             if (values.length == 0) {
                 m_secret.setValue(NullValue.INSTANCE);
             } else if (values.length == 1) {

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 public enum PrimFuncValue implements Expr,Value {
 
     // arithmetic
-    ADD2, SUB2, MUL2, DIV2, IDIV2, MOD2, POW2, NEG1, PLUS1,
+    ADD2, SUB2, MUL2, DIV2, IDIV2, MOD2, POW2, NEG1, PLUS1, NOT1,
     // comparisons
     LT2, LTE2, GT2, GTE2, EQ2, NEQ2,
     // output
@@ -64,6 +64,9 @@ public enum PrimFuncValue implements Expr,Value {
         case PLUS1:
             checkNumArgs(values, 1);
             return new FloatValue(values[0].asFloat());
+        case NOT1:
+            checkNumArgs(values, 1);
+            return BoolValue.create(!values[0].asBool());
 
         case LT2:
             checkNumArgs(values, 2);

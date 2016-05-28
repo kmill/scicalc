@@ -13,8 +13,8 @@ public class TestParser {
 		runParser("2^3^4");
 		runParser("2^-2"); // error
 		runParser("2^(-2)"); // ok
-		runParser("if n <= 1 then n else fib(n - 1) + fib(n - 2) end");
-		runParser("if n<=0 then 0 elif n==1 then 1 else fib(n-1) + fib(n-2) end");
+		runParser("if n <= 1 do n else fib(n - 1) + fib(n - 2) end");
+		runParser("if n<=0 do 0 elif n==1 do 1 else fib(n-1) + fib(n-2) end");
 	}
 	
 	private static void runParser(String input) {

@@ -24,10 +24,10 @@ public class SciScanner {
     private static Pattern whitespace = Pattern.compile("\\s+"),
             identifier = Pattern.compile("[a-zA-Z_$][a-zA-Z\\d_$]*"),
             number = Pattern.compile("[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?"),
-            operator = Pattern.compile("->|[-+*/^%()\\[\\],;]|:=|<-|==|<=|<|>=|>|!=|&&|\\|\\|");
+            operator = Pattern.compile("->|[-+*/^%()\\[\\],;]|:=|<-|==|<=|<|>=|>|!=|!|&&|\\|\\|");
 
-    private static final String[] RESERVED_IDENTS = { "div", "null", "true", "false", "begin", "if", "then", "else",
-            "elif", "while", "fun", "block" };
+    private static final String[] RESERVED_IDENTS = { "div", "null", "true", "false", "if", "elif", "else", "end",
+            "while", "do", "fun", "block" };
 
     public SciScanner(String input) {
         m_input = input;

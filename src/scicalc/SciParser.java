@@ -30,12 +30,12 @@ public class SciParser {
 
     private Expr parseIf(Expr cond, Expr cons) throws ParseError {
         if (matchReserved("else")) {
-            Expr alt = parseExpr();
+            Expr alt = parseExprSeq();
             return new IfExpr(cond, cons, alt);
         } else if (matchReserved("elif")) {
-            Expr cond2 = parseExpr();
-            checkToken(TokenType.RESERVED, "then");
-            Expr cons2 = parseExpr();
+            Expr cond2 = parseExprSeq();
+            checkToken(TokenType.RESERVED, "do");
+            Expr cons2 = parseExprSeq();
             return new IfExpr(cond, cons, parseIf(cond2, cons2));
         } else {
             return new IfExpr(cond, cons, NullValue.INSTANCE);
@@ -50,23 +50,10 @@ public class SciParser {
         } else if (m_scanner.isTokenType(TokenType.STRING)) {
             e = new StringValue(m_scanner.getToken());
             nextToken();
+        } else if (matchOperator("!")) {
+            e = AppExpr.create(PrimFuncValue.NOT1, parseTerm());
         } else if (matchOperator("(")) {
-            // parse "(" expr {";"|expr} [";"] ")"
-            // (a simpler form would have been "(" expr ")", but I wanted
-            // sequencing somehow in the language)
-            while (matchOperator(";")) {
-                // consume leading semicolons
-            }
-            e = parseExpr();
-            while (matchOperator(";")) {
-                while (matchOperator(";")) {
-                    // consume semicolons
-                }
-                if (m_scanner.isTokenType(TokenType.OPERATOR) && m_scanner.isToken(")")) {
-                    break;
-                }
-                e = new SeqExpr(e, parseExpr());
-            }
+            e = parseExprSeq();
             checkToken(TokenType.OPERATOR, ")");
         } else if (matchOperator("[")) {
             ArrayList<Expr> items = new ArrayList<>();
@@ -86,23 +73,32 @@ public class SciParser {
         } else if (matchReserved("false")) {
             e = BoolValue.FALSE_INSTANCE;
         } else if (matchReserved("if")) {
-            // "if" expr "then" expr {"elif" expr "then"} ["else" expr]
-            Expr cond = parseExpr();
-            checkToken(TokenType.RESERVED, "then");
-            Expr cons = parseExpr();
+            // "if" expr "do" expr {"elif" expr "do"} ["else" expr] "end"
+            Expr cond = parseExprSeq();
+            checkToken(TokenType.RESERVED, "do");
+            Expr cons = parseExprSeq();
             e = parseIf(cond, cons);
+            checkToken(TokenType.RESERVED, "end");
         } else if (matchReserved("while")) {
-            // "while" expr ["->" expr]
-            Expr cond = parseExpr();
+            // "while" expr ["do" expr] "end"
+            Expr cond = parseExprSeq();
             Expr body;
-            if (matchOperator("->")) {
-                body = parseExpr();
+            if (matchReserved("do")) {
+                body = parseExprSeq();
             } else {
                 body = NullValue.INSTANCE;
             }
             e = new WhileExpr(cond, body);
+            checkToken(TokenType.RESERVED, "end");
         } else if (matchReserved("fun")) {
-            // fun (param1, param2, ...) -> body
+            // "fun" [name] "("param1, param2, ...")" body "end"
+            // if name is present, then this is shorthand for the expression
+            // name := "fun" "("param1, param2, ...")" body "end"
+            String name = null;
+            if (m_scanner.isTokenType(TokenType.IDENTIFIER)) {
+                name = m_scanner.getToken();
+                nextToken();
+            }
             checkToken(TokenType.OPERATOR, "(");
             ArrayList<String> parameters = new ArrayList<>();
             if (!matchOperator(")")) {
@@ -122,23 +118,26 @@ public class SciParser {
                 }
                 checkToken(TokenType.OPERATOR, ")");
             }
-            checkToken(TokenType.OPERATOR, "->");
-            Expr body = parseExpr();
+            Expr body = parseExprSeq();
             e = new FunExpr(parameters.toArray(new String[parameters.size()]), body);
+            checkToken(TokenType.RESERVED, "end");
+            if (name != null) {
+                e = new StoreExpr(name, e);
+            }
         } else if (matchReserved("block")) {
-            // block -> body
-            // block label -> body
+            // "block" [label] "do" body "end"
             String label = null;
-            if (!matchOperator("->")) {
+            if (!matchReserved("do")) {
                 if (!m_scanner.isTokenType(TokenType.IDENTIFIER)) {
                     throw parseError("Expecting identifier");
                 }
                 label = m_scanner.getToken();
                 nextToken();
-                checkToken(TokenType.OPERATOR, "->");
+                checkToken(TokenType.RESERVED, "do");
             }
-            Expr body = parseExpr();
+            Expr body = parseExprSeq();
             e = new BlockExpr(label, body);
+            checkToken(TokenType.RESERVED, "end");
         } else if (m_scanner.isTokenType(TokenType.IDENTIFIER)) {
             e = new VariableExpr(m_scanner.getToken());
             nextToken();
@@ -181,21 +180,8 @@ public class SciParser {
      */
     private Expr parsePow() throws ParseError {
         Expr expr = parseTerm();
-        if (m_scanner.isTokenType(TokenType.OPERATOR) && m_scanner.isToken("^")) {
-            // this is a little less straightforward than it could be because I
-            // want to avoid allocating an ArrayList for every term whether or
-            // not "^" appears.
-            ArrayList<Expr> exprs = new ArrayList<>();
-            exprs.add(expr);
-            while (matchOperator("^")) {
-                exprs.add(parseTerm());
-            }
-            // right-associativity means starting from the end and creating the
-            // POW applications
-            expr = exprs.get(exprs.size() - 1);
-            for (int i = exprs.size() - 2; i >= 0; i--) {
-                expr = AppExpr.create(PrimFuncValue.POW2, exprs.get(i), expr);
-            }
+        if (matchOperator("^")) {
+            expr = AppExpr.create(PrimFuncValue.POW2, expr, parsePow());
         }
         return expr;
     }
@@ -208,12 +194,12 @@ public class SciParser {
      */
     private Expr parseMulDiv() throws ParseError {
         Expr expr = parsePow();
-        while (m_scanner.isTokenType(TokenType.OPERATOR)) {
+        while (true) {
             if (matchOperator("*")) {
                 expr = AppExpr.create(PrimFuncValue.MUL2, expr, parsePow());
             } else if (matchOperator("/")) {
                 expr = AppExpr.create(PrimFuncValue.DIV2, expr, parsePow());
-            } else if (matchOperator("div")) {
+            } else if (matchReserved("div")) {
                 expr = AppExpr.create(PrimFuncValue.IDIV2, expr, parsePow());
             } else if (matchOperator("%")) {
                 expr = AppExpr.create(PrimFuncValue.MOD2, expr, parsePow());
@@ -243,7 +229,7 @@ public class SciParser {
         } else {
             expr = parseMulDiv();
         }
-        while (m_scanner.isTokenType(TokenType.OPERATOR)) {
+        while (true) {
             if (matchOperator("+")) {
                 expr = AppExpr.create(PrimFuncValue.ADD2, expr, parseMulDiv());
             } else if (matchOperator("-")) {
@@ -341,23 +327,31 @@ public class SciParser {
         return parseStore();
     }
 
-    public Expr parseTopExpr() throws ParseError {
-        nextToken(); // initialize scanner
-
-        Expr e;
+    private Expr parseExprSeq() throws ParseError {
+        // parse {";"} expr {";"|expr} [";"]
         while (matchOperator(";")) {
             // consume leading semicolons
         }
-        e = parseExpr();
+        Expr e = parseExpr();
         while (matchOperator(";")) {
             while (matchOperator(";")) {
                 // consume semicolons
             }
-            if (m_scanner.isTokenType(TokenType.EOF)) {
+            if (m_scanner.isTokenType(TokenType.EOF)
+                    || m_scanner.isTokenType(TokenType.OPERATOR) && (m_scanner.isToken(")"))
+                    || m_scanner.isTokenType(TokenType.RESERVED) && (m_scanner.isToken("elif")
+                            || m_scanner.isToken("else") || m_scanner.isToken("end") || m_scanner.isToken("do"))) {
                 break;
             }
             e = new SeqExpr(e, parseExpr());
         }
+        return e;
+    }
+
+    public Expr parseTopExpr() throws ParseError {
+        nextToken(); // initialize scanner
+
+        Expr e = parseExprSeq();
         if (!m_scanner.isTokenType(TokenType.EOF)) {
             throw parseError("Expecting end of input");
         }
